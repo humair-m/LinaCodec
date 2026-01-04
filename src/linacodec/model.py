@@ -10,7 +10,7 @@ from .module.fsq import FiniteScalarQuantizer
 from .module.global_encoder import GlobalEncoder
 from .module.postnet import PostNet
 from .module.ssl_extractor import SSLFeatureExtractor
-from .module.transformer import Transformer
+from .module.transformer import Transformer 
 from .module.distill_wavlm import wav2vec2_model
 from .util import freeze_modules, get_logger
 
@@ -73,7 +73,7 @@ class LinaCodecModel(nn.Module):
         ckpt = torch.load(path)
         wavlm_model = wav2vec2_model(**ckpt["config"])
         result = wavlm_model.load_state_dict(ckpt["state_dict"], strict=False)
-        self.wavlm_model = wavlm_model.cuda()
+        self.wavlm_model = wavlm_model.cpu()
         self.distilled_layers = [6, 8] ## can set custom, 6-8 seems best however
 
     def _init_ssl_extractor(self, config: LinaCodecConfig, ssl_feature_extractor: SSLFeatureExtractor):
@@ -428,7 +428,7 @@ class LinaCodecModel(nn.Module):
         local_ssl_features, global_ssl_features = self.forward_ssl_features(waveform.unsqueeze(0), padding=padding)
 
         result = LinaCodecFeatures()
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=True):
+        with torch.autocast(device_type="cpu", dtype=torch.bfloat16, enabled=True):
             if return_content:
                 content_embedding, token_indices, _, _ = self.forward_content(local_ssl_features)
                 result.content_embedding = content_embedding.squeeze(0)  # (seq_len, dim)
@@ -475,7 +475,7 @@ class LinaCodecModel(nn.Module):
             seq_len = content_embedding.size(0)
             target_audio_length = self._calculate_original_audio_length(seq_len)
 
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=True):
+        with torch.autocast(device_type="cpu", dtype=torch.bfloat16, enabled=True):
             mel_length = self._calculate_target_mel_length(target_audio_length)
             content_embedding = content_embedding.unsqueeze(0)  # (1, seq_len, dim)
             global_embedding = global_embedding.unsqueeze(0)  # (1, dim)
